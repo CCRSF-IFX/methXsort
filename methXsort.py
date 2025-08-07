@@ -691,8 +691,13 @@ if __name__ == "__main__":
     parser_reads.add_argument("--read2", help="FASTQ file for read 2 (optional)")
     parser_reads.add_argument("--out", help="Output file for converted read")
     parser_reads.add_argument("--out2", help="Output file for converted read 2")
-    parser_reads.add_argument("--with_orig_seq", action="store_true",
-        help="Include the original sequence in the FASTQ header using awk (slower, but preserves original sequence).")
+
+    # Create mutually exclusive group for --with_orig_seq and --without_orig_seq
+    seq_group = parser_reads.add_mutually_exclusive_group()
+    seq_group.add_argument("--without_orig_seq", action="store_true",
+        help="Do not include the original sequence in the FASTQ header (faster)")
+    seq_group.add_argument("--with_orig_seq", action="store_true", default=True,
+        help="Include the original sequence in the FASTQ header using awk (slower, but preserves original sequence) [default]")
 
     # Subcommand 3: filter-fastq-by-bam
     parser_bam2fq = subparsers.add_parser("filter-fastq-by-bam", help="Convert BAM to FASTQ using filterbyname.sh and raw reads")
@@ -782,17 +787,9 @@ if __name__ == "__main__":
         out_fa = convert_fasta(args.ref_fasta, out_fa=out_fa)
         print(out_fa)
     elif args.command == "convert-reads":
-        # Old parallel_convert_fastq code (commented out)
-        # out = args.out if args.out else args.read + ".meth"
-        # parallel_convert_fastq(args.read, out, mode="r1")
-        # if args.read2:
-        #     out2 = args.out2 if args.out2 else args.read2 + ".meth"
-        #     parallel_convert_fastq(args.read2, out2, mode="r2")
-
-        # Use the fast awk/sed/gzip implementation
         out = args.out if args.out else args.read + ".meth"
         out2 = args.out2 if args.read2 and args.out2 else (args.read2 + ".meth" if args.read2 else None)
-        convert_reads_c2t_r1_g2a_r2(args.read, args.read2, out, out2, with_orig_seq=args.with_orig_seq)
+        convert_reads_c2t_r1_g2a_r2(args.read, args.read2, out, out2, with_orig_seq=not args.without_orig_seq)
     elif args.command == "filter-fastq-by-bam":
         filter_fastq_by_bam(
             read=args.read, read2=args.read2,
