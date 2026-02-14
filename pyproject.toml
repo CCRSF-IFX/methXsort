@@ -1,0 +1,107 @@
+# PEP 517/518 compliant build configuration for methXsort
+# This file defines the package metadata and build requirements using modern Python packaging standards
+
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "methXsort"
+version = "0.1.0"
+description = "Sort bisulfite-/enzymatic-converted reads from xenograft experiments"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+authors = [
+    {name = "Shaojun Xie", email = "xies4@nih.gov"}
+]
+keywords = [
+    "bioinformatics", 
+    "xenograft", 
+    "methylation", 
+    "bisulfite-sequencing",
+    "bbsplit",
+    "xengsort",
+    "PDX"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "pysam>=0.15.0",
+    "xengsort>=2.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=22.0",
+    "flake8>=4.0",
+    "mypy>=0.950",
+]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/CCRSF-IFX/methXsort"
+Documentation = "https://github.com/CCRSF-IFX/methXsort#readme"
+Repository = "https://github.com/CCRSF-IFX/methXsort"
+"Bug Tracker" = "https://github.com/CCRSF-IFX/methXsort/issues"
+
+[project.scripts]
+methxsort = "methxsort.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["methxsort*"]
+exclude = ["tests*", "docs*", "scripts*", "sf_smk_wl*", "data*", "RnD_methXsort*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py37', 'py38', 'py39', 'py310', 'py311', 'py312']
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | build
+  | dist
+  | __pycache__
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.mypy]
+python_version = "3.7"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+signore_missing_imports = true
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
