@@ -17,12 +17,16 @@ rule convert_ref:
     output:
         graft_fa_cvt = os.path.join(outdir, "ref_idx/graft_cvt.fa"),
         host_fa_cvt = os.path.join(outdir, "ref_idx/host_cvt.fa"),
+    log: 
+        graft_log = os.path.join(outdir, "ref_idx/graft_cvt.log"),
+        host_log = os.path.join(outdir, "ref_idx/host_cvt.log"),
     shell:
         """
 python {methxsort_path} convert-ref \
-    {input.graft_fa} --out {output.graft_fa_cvt} 
+    {input.graft_fa} --out {output.graft_fa_cvt} > {log.graft_log} 2>&1 &
 python {methxsort_path} convert-ref \
-    {input.host_fa} --out {output.host_fa_cvt}
+    {input.host_fa} --out {output.host_fa_cvt} > {log.host_log} 2>&1 &
+wait
 """
 
 rule xengsort_idx:
