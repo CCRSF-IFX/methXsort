@@ -1,0 +1,70 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Test on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
+      fail-fast: false  # Continue testing other versions even if one fails
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        
+    - name: Verify dependency versions
+      run: |
+        echo "Python version:"
+        python --version
+        echo ""
+        echo "Installed packages:"
+        pip list | grep -E "(pysam|xengsort)"
+        echo ""
+        echo "Verifying key dependencies..."
+        python -c "import pysam; print(f'✓ pysam {pysam.__version__}')"
+        python -c "import sys; print(f'✓ Python {sys.version}')"
+        
+    - name: Test package import
+      run: |
+        python -c "from methxsort import core"
+        python -c "from methxsort.core import convert_fasta, convert_reads_c2t_r1_g2a_r2"
+        python -c "from methxsort.core import run_bbsplit, build_bbsplit_index"
+        python -c "from methxsort.core import stat_split, run_xengsort_classify"
+        
+    - name: Test CLI help
+      run: |
+        methxsort --help
+        methxsort --version
+        python -m methxsort --help
+        
+    - name: Test subcommand help
+      run: |
+        methxsort convert-ref --help
+        methxsort convert-reads --help
+        methxsort filter-fastq-by-bam --help
+        methxsort bbsplit --help
+        methxsort bbsplit-index --help
+        methxsort stat-split --help
+        methxsort xengsort-index --help
+        methxsort xengsort-classify --help
+        methxsort restore-fastq --help
+        methxsort parse-xengsort-summary --help
+        methxsort parse-xengsort-log-table --help
+        
