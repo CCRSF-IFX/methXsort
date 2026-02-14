@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import toolshed
-from toolshed import nopen, reader, is_newer_b
 import argparse
 import sys
 import os
@@ -15,6 +13,25 @@ import pathlib
 import re
 
 __version__ = "0.1.0"
+
+# Simple replacements for toolshed functions
+def nopen(filename, mode='r'):
+    """Open file, handling gzip compression"""
+    if filename.endswith('.gz'):
+        return gzip.open(filename, mode + 't' if 't' not in mode and 'b' not in mode else mode)
+    return open(filename, mode)
+
+def is_newer_b(a, b):
+    """Check if file b is newer than file a"""
+    if not os.path.exists(b):
+        return False
+    if not os.path.exists(a):
+        return True
+    return os.path.getmtime(b) > os.path.getmtime(a)
+
+def reader(fname):
+    """Simple file reader"""
+    return nopen(fname)
 
 def wrap(seq, width=60):
     return [seq[i:i+width] for i in range(0, len(seq), width)]
@@ -675,5 +692,3 @@ def parse_xengsort_summary_table(logfile, outfile):
         writer.writerow([data.get(col, "") for col in header])
 
     print(f"Classification statistics (vertical table) written to {outfile}")
-
-if __name__ == "__main__":
