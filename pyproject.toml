@@ -57,12 +57,13 @@ Repository = "https://github.com/CCRSF-IFX/methXsort"
 "Bug Tracker" = "https://github.com/CCRSF-IFX/methXsort/issues"
 
 [project.scripts]
-methxsort = "methxsort.__main__:main"
+methXsort = "methxsort.__main__:main"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["methxsort*"]
-exclude = ["tests*", "docs*", "scripts*", "sf_smk_wl*", "data*", "RnD_methXsort*"]
+[tool.setuptools]
+packages = ["methxsort"]
+
+[tool.setuptools.package-data]
+methxsort = ["py.typed"]
 
 [tool.black]
 line-length = 100
