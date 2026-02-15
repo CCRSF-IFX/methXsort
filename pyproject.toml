@@ -2,15 +2,15 @@
 # This file defines the package metadata and build requirements using modern Python packaging standards
 
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "methXsort"
-version = "0.1.0"
+version = "0.2.0"
 description = "Sort bisulfite-/enzymatic-converted reads from xenograft experiments"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
     {name = "Shaojun Xie", email = "xies4@nih.gov"}
@@ -30,11 +30,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
 
@@ -71,7 +66,7 @@ exclude = ["tests*", "docs*", "scripts*", "sf_smk_wl*", "data*", "RnD_methXsort*
 
 [tool.black]
 line-length = 100
-target-version = ['py37', 'py38', 'py39', 'py310', 'py311', 'py312']
+target-version = ['py312']
 exclude = '''
 /(
     \.git
@@ -91,7 +86,7 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 
 [tool.mypy]
-python_version = "3.7"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false

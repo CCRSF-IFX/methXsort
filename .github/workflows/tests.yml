@@ -8,25 +8,21 @@ on:
 
 jobs:
   test:
-    name: Test on Python ${{ matrix.python-version }}
+    name: Test on Python 3.12
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
-      fail-fast: false  # Continue testing other versions even if one fails
         
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.12'
         
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python -m pip install --upgrade pip setuptools wheel
         pip install -e .
         
     - name: Verify dependency versions
@@ -40,6 +36,7 @@ jobs:
         echo "Verifying key dependencies..."
         python -c "import pysam; print(f'✓ pysam {pysam.__version__}')"
         python -c "import sys; print(f'✓ Python {sys.version}')"
+        python -c "import xengsort; print(f'✓ xengsort available')"
         
     - name: Test package import
       run: |
@@ -67,4 +64,3 @@ jobs:
         methxsort restore-fastq --help
         methxsort parse-xengsort-summary --help
         methxsort parse-xengsort-log-table --help
-        
