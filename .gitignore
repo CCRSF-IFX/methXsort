@@ -5,3 +5,5 @@ RnD_methXsort
 **/.snakemake/**
 **/data/test/**
 **/sherman_reads_100k_xengsort/**
+**/methXsort.egg-info/**
+**/dist/** */
