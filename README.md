@@ -15,7 +15,24 @@ MethXsort supports both `xengsort` and `bbsplit` for sorting reads into host and
 - pysam >= 0.15.0
 - xengsort >= 2.0.9
 
+### Install from PyPI (recommended)
+
+Once published, you can install methXsort directly from PyPI:
+
+```bash
+pip install methXsort
+```
+
+After installation, verify it works:
+
+```bash
+methXsort --version
+methXsort --help
+```
+
 ### Install from source
+
+For development or to get the latest changes:
 
 ```bash
 git clone https://github.com/CCRSF-IFX/methXsort.git
@@ -23,7 +40,9 @@ cd methXsort
 pip install -e .
 ```
 
-See [INSTALLATION.md](INSTALLATION.md) for more details.
+This installs the package in editable mode, so any changes to the source code are immediately reflected.
+
+See [INSTALLATION.md](docs/INSTALLATION.md) for more details.
 
 ---
 

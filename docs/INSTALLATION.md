@@ -10,7 +10,6 @@ methXsort/
 │   ├── __init__.py         # Package initialization
 │   ├── __main__.py         # CLI entry point
 │   └── core.py             # Core functionality
-├── setup.py                # Package configuration
 ├── requirements.txt        # Dependencies
 ├── README.md              # Documentation
 └── methXsort.py           # Original script (preserved for reference)
