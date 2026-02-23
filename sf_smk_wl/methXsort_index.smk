@@ -4,7 +4,8 @@ host_fa = config["host_fa"]
 outdir = os.path.abspath(config["outdir"])
 xengsort_index_prefix = config.get("xengsort_index_prefix", None)
 
-methxsort_path = config["methxsort_path"]
+# Note: methXsort should be installed via pip (pip install methXsort)
+# If not installed, you can specify the path in config: methxsort_path = config.get("methxsort_path", "methXsort")
 
 rule all:
     input:
@@ -22,9 +23,9 @@ rule convert_ref:
         host_log = os.path.join(outdir, "ref_idx/host_cvt.log"),
     shell:
         """
-python {methxsort_path} convert-ref \
+methXsort convert-ref \
     {input.graft_fa} --out {output.graft_fa_cvt} > {log.graft_log} 2>&1 &
-python {methxsort_path} convert-ref \
+methXsort convert-ref \
     {input.host_fa} --out {output.host_fa_cvt} > {log.host_log} 2>&1 &
 wait
 """
@@ -41,7 +42,7 @@ rule xengsort_idx:
 
     shell:
         """
-python {methxsort_path} xengsort-index \
+methXsort xengsort-index \
     --host {input.host_fa} --graft {input.graft_fa} \
     --index {params.xengsort_index_prefix} \
     -n 7_000_000_000 --fill 0.88 --statistics summary -k 25 \

@@ -47,20 +47,20 @@ jobs:
         
     - name: Test CLI help
       run: |
-        methxsort --help
-        methxsort --version
+        methXsort --help
+        methXsort --version
         python -m methxsort --help
         
     - name: Test subcommand help
       run: |
-        methxsort convert-ref --help
-        methxsort convert-reads --help
-        methxsort filter-fastq-by-bam --help
-        methxsort bbsplit --help
-        methxsort bbsplit-index --help
-        methxsort stat-split --help
-        methxsort xengsort-index --help
-        methxsort xengsort-classify --help
-        methxsort restore-fastq --help
-        methxsort parse-xengsort-summary --help
-        methxsort parse-xengsort-log-table --help
+        methXsort convert-ref --help
+        methXsort convert-reads --help
+        methXsort filter-fastq-by-bam --help
+        methXsort bbsplit --help
+        methXsort bbsplit-index --help
+        methXsort stat-split --help
+        methXsort xengsort-index --help
+        methXsort xengsort-classify --help
+        methXsort restore-fastq --help
+        methXsort parse-xengsort-summary --help
+        methXsort parse-xengsort-log-table --help

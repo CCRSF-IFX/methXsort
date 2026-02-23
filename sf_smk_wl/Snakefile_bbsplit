@@ -27,11 +27,9 @@ for searchterm in searchterms:
 
 analysis = config.analysis
 unaligned = config.unaligned
-methXsort_path = os.path.join(config.analysis, "methXsort.py")
-if not os.path.exists(methXsort_path):
-    sys.stdout.write("\n\n\nExecution failed: methXsort.py not found in the analysis directory.\n")
-    sys.stdout.write("Please ensure that methXsort.py is present in the analysis directory.\n\n\n")
-    sys.exit(1)
+
+# Note: methXsort should be installed via pip (pip install methXsort)
+# If not installed, you can use: python /path/to/methXsort.py
 unalignedfolder = "/" + "/".join(unaligned.split("/")[1:len(unaligned.split("/")) - 1])
 one_up = path.abspath(path.join(os.getcwd(),"../"))
 include: program.runParametersImport
@@ -94,7 +92,7 @@ rule convert_reads:
         """
 module load miniconda
 conda activate {program.methXsort_env_path}
-python {methXsort_path} convert-reads --read {input.R1} --read2 {input.R2} \
+methXsort convert-reads --read {input.R1} --read2 {input.R2} \
               --out {output.R1} --out2 {output.R2} 
 """
 
@@ -124,7 +122,7 @@ rule bbsplit:
         module load miniconda
         conda activate {program.methXsort_env_path}
         cd {params.workdir}
-        python {methXsort_path} bbsplit \
+        methXsort bbsplit \
             --read {input.reads_R1} \
             --read2 {input.reads_R2} \
             --host mm \
@@ -150,12 +148,12 @@ rule filter_fastq_by_bam:
         fastq_mm_R2 = os.path.join(config.analysis, "Sample_{sample}/fastq/bbsplit_mm_R2.fastq.gz"),
     shell:
         """
-python {methXsort_path} filter-fastq-by-bam \
+methXsort filter-fastq-by-bam \
     --read {input.R1} --read2 {input.R2} \
     --bam {input.bam_hs} \
     --out {output.fastq_hs_R1} --out2 {output.fastq_hs_R2}
 
-python {methXsort_path} filter-fastq-by-bam \
+methXsort filter-fastq-by-bam \
     --read {input.R1} --read2 {input.R2} \
     --bam {input.bam_mm} \
     --out {output.fastq_mm_R1} --out2 {output.fastq_mm_R2}
@@ -173,7 +171,7 @@ rule stat_read_number:
         """
         module load miniconda
         conda activate {program.methXsort_env_path}
-        python {methXsort_path} stat-split {input.raw_R1} {input.fastq_hs_R1} {input.fastq_mm_R1} \
+        methXsort stat-split {input.raw_R1} {input.fastq_hs_R1} {input.fastq_mm_R1} \
            > {output}
         """
 	

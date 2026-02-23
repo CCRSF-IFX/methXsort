@@ -28,11 +28,9 @@ for searchterm in searchterms:
 analysis = config.analysis
 unaligned = config.unaligned
 xengsort_index_prefix = reference.xengsort_index_prefix
-methXsort_path = os.path.join(config.analysis, "methXsort.py")
-if not os.path.exists(methXsort_path):
-    sys.stdout.write("\n\n\nExecution failed: methXsort.py not found in the analysis directory.\n")
-    sys.stdout.write("Please ensure that methXsort.py is present in the analysis directory.\n\n\n")
-    sys.exit(1)
+
+# Note: methXsort should be installed via pip (pip install methXsort)
+# If not installed, you can use: python /path/to/methXsort.py
 unalignedfolder = "/" + "/".join(unaligned.split("/")[1:len(unaligned.split("/")) - 1])
 one_up = path.abspath(path.join(os.getcwd(),"../"))
 include: program.runParametersImport
@@ -96,7 +94,7 @@ rule convert_reads:
         """
 module load miniconda
 conda activate {program.methXsort_env_path}
-python {methXsort_path} convert-reads --with_orig_seq \
+methXsort convert-reads --with_orig_seq \
     --read {input.R1} --read2 {input.R2} \
     --out {output.R1} --out2 {output.R2} 
 """
@@ -118,7 +116,7 @@ rule xengsort_classify:
         """
 module load miniconda
 conda activate {program.methXsort_env_path}
-python {methXsort_path} xengsort-classify \
+methXsort xengsort-classify \
     --read {input.reads_R1} --read2 {input.reads_R2} \
     --index {xengsort_index_prefix} \
     --out_prefix {params.xengsort_out_prefix} \
@@ -135,7 +133,7 @@ rule parse_xengsort_summary:
         """
 module load miniconda
 conda activate {program.methXsort_env_path}
-python {methXsort_path} parse-xengsort-summary \
+methXsort parse-xengsort-summary \
     --xengsort_summary {input.classify_log} --outfile {output.summary_csv}
 """
 
@@ -154,10 +152,10 @@ rule restore_fastq:
         """
 module load miniconda
 conda activate {program.methXsort_env_path}
-python {methXsort_path} restore-fastq \
+methXsort restore-fastq \
     --read {input.R1_graft} --read2 {input.R2_graft} \
     --out {output.fq_graft_R1} --out2 {output.fq_graft_R2} 
-python {methXsort_path} restore-fastq \
+methXsort restore-fastq \
     --read {input.R1_host} --read2 {input.R2_host} \
     --out {output.fq_host_R1} --out2 {output.fq_host_R2}
 """
@@ -176,7 +174,7 @@ rule stat_read_number:
         """
         module load miniconda
         conda activate {program.methXsort_env_path}
-        python {methXsort_path} stat-split --raw {input.raw_R1} --graft {input.fq_graft_R1} --host {input.fq_host_R1} \
+        methXsort stat-split --raw {input.raw_R1} --graft {input.fq_graft_R1} --host {input.fq_host_R1} \
            --sample_name {wildcards.sample} \
            --xengsort_prefix {params.xengsort_outprefix} \
            > {output}

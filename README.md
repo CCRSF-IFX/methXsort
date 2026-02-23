@@ -29,10 +29,10 @@ See [INSTALLATION.md](INSTALLATION.md) for more details.
 
 ## Usage
 
-All commands are run via the main script:
+All commands are run via the installed command:
 
 ```bash
-python methXsort.py <subcommand> [options]
+methXsort <subcommand> [options]
 ```
 
 ### Main Subcommands
@@ -42,13 +42,13 @@ python methXsort.py <subcommand> [options]
 Convert a reference FASTA for bisulfite mapping (C→T and G→A):
 
 ```bash
-python methXsort.py convert-ref <ref_fasta> [-o OUTPUT]
+methXsort convert-ref <ref_fasta> [-o OUTPUT]
 ```
 
 #### Build xengsort Index
 
 ```bash
-python methXsort.py xengsort-index --host <host.fa> --graft <graft.fa> --index <index_dir> [-n N] [--fill FILL] [--statistics STAT] [-k K] [--xengsort_path <path>] [--xengsort_extra <extra>]
+methXsort xengsort-index --host <host.fa> --graft <graft.fa> --index <index_dir> [-n N] [--fill FILL] [--statistics STAT] [-k K] [--xengsort_path <path>] [--xengsort_extra <extra>]
 ```
 
 #### Convert Reads
@@ -56,7 +56,7 @@ python methXsort.py xengsort-index --host <host.fa> --graft <graft.fa> --index <
 Convert reads for bisulfite mapping (C→T for R1, G→A for R2):
 
 ```bash
-python methXsort.py convert-reads --read <R1.fastq.gz> [--read2 <R2.fastq.gz>] [--out <R1_out>] [--out2 <R2_out>] [--with_orig_seq]
+methXsort convert-reads --read <R1.fastq.gz> [--read2 <R2.fastq.gz>] [--out <R1_out>] [--out2 <R2_out>] [--with_orig_seq]
 ```
 - `--with_orig_seq`: Store the original sequence in the header (slower, but traceable).
 
@@ -64,7 +64,7 @@ python methXsort.py convert-reads --read <R1.fastq.gz> [--read2 <R2.fastq.gz>] [
 #### Classify Reads with xengsort
 
 ```bash
-python methXsort.py xengsort-classify --read <R1.fastq.gz> [--read2 <R2.fastq.gz>] --index <index_dir> --out_prefix <prefix> --threads <N> [--xengsort_path <path>] [--xengsort_extra <extra>]
+methXsort xengsort-classify --read <R1.fastq.gz> [--read2 <R2.fastq.gz>] --index <index_dir> --out_prefix <prefix> --threads <N> [--xengsort_path <path>] [--xengsort_extra <extra>]
 ```
 
 Output: 
@@ -85,7 +85,7 @@ Output:
 Output CSV statistics for split reads:
 
 ```bash
-python methXsort.py stat-split --raw <raw_R1.fastq.gz> --host <host_R1.fastq.gz> --graft <graft_R1.fastq.gz>
+methXsort stat-split --raw <raw_R1.fastq.gz> --host <host_R1.fastq.gz> --graft <graft_R1.fastq.gz>
 ```
 
 #### Restore FASTQ from xengsort Output
@@ -93,7 +93,7 @@ python methXsort.py stat-split --raw <raw_R1.fastq.gz> --host <host_R1.fastq.gz>
 Restore original sequences in FASTQ files classified by xengsort:
 
 ```bash
-python methXsort.py restore-fastq --read <classified_R1.fq.gz> --out <restored_R1.fq.gz> [--read2 <classified_R2.fq.gz> --out2 <restored_R2.fq.gz>]
+methXsort restore-fastq --read <classified_R1.fq.gz> --out <restored_R1.fq.gz> [--read2 <classified_R2.fq.gz> --out2 <restored_R2.fq.gz>]
 ```
 
 ---
@@ -102,28 +102,28 @@ python methXsort.py restore-fastq --read <classified_R1.fq.gz> --out <restored_R
 
 1. **Convert reference genomes:**
     ```bash
-    python methXsort.py convert-ref mm10.fa -o mm10_converted.fa
-    python methXsort.py convert-ref hg38.fa -o hg38_converted.fa
+    methXsort convert-ref mm10.fa -o mm10_converted.fa
+    methXsort convert-ref hg38.fa -o hg38_converted.fa
     ```
 
 2. **Build bbsplit and xengsort indices:**
     ```bash
-    python methXsort.py xengsort-index --host mm10_converted.fa --graft hg38_converted.fa --index xengsort_index_7B
+    methXsort xengsort-index --host mm10_converted.fa --graft hg38_converted.fa --index xengsort_index_7B
     ```
 
 3. **Convert reads:**
     ```bash
-    python methXsort.py convert-reads --read sample_R1.fastq.gz --read2 sample_R2.fastq.gz --with_orig_seq
+    methXsort convert-reads --read sample_R1.fastq.gz --read2 sample_R2.fastq.gz --with_orig_seq
     ```
 
 4. **Run bbsplit or xengsort:**
     ```bash
-    python methXsort.py xengsort-classify --read sample_R1.meth.gz --read2 sample_R2.meth.gz --index xengsort_index_7B --out_prefix sample_xengsort --threads 8
+    methXsort xengsort-classify --read sample_R1.meth.gz --read2 sample_R2.meth.gz --index xengsort_index_7B --out_prefix sample_xengsort --threads 8
     ```
 
 5. **Restore original FASTQ:**
     ```bash
-    python methXsort.py restore-fastq --read sample_xengsort-graft.1.fq.gz --out sample_graft_R1_restored.fq.gz --read2 sample_xengsort-graft.2.fq.gz --out2 sample_graft_R2_restored.fq.gz
+    methXsort restore-fastq --read sample_xengsort-graft.1.fq.gz --out sample_graft_R1_restored.fq.gz --read2 sample_xengsort-graft.2.fq.gz --out2 sample_graft_R2_restored.fq.gz
     ```
 
 ### Alternstive workflow using `bbsplit`
@@ -132,7 +132,7 @@ python methXsort.py restore-fastq --read <classified_R1.fq.gz> --out <restored_R
 #### 5. Build bbsplit Index
 
 ```bash
-python methXsort.py bbsplit-index --host <host.fa> --graft <graft.fa> --host_name <host> --graft_name <graft> [--bbsplit_path <path>] [--bbsplit_index_path <dir>]
+methXsort bbsplit-index --host <host.fa> --graft <graft.fa> --host_name <host> --graft_name <graft> [--bbsplit_path <path>] [--bbsplit_index_path <dir>]
 ```
 
 #### 4. Run bbsplit
@@ -140,7 +140,7 @@ python methXsort.py bbsplit-index --host <host.fa> --graft <graft.fa> --host_nam
 Split reads into host and graft using bbsplit:
 
 ```bash
-python methXsort.py bbsplit --read <R1.fastq.gz> [--read2 <R2.fastq.gz>] --host <host_name> --graft <graft_name> --out_host <host.bam> --out_graft <graft.bam> [--bbsplit_path <path>] [--bbsplit_extra <extra>]
+methXsort bbsplit --read <R1.fastq.gz> [--read2 <R2.fastq.gz>] --host <host_name> --graft <graft_name> --out_host <host.bam> --out_graft <graft.bam> [--bbsplit_path <path>] [--bbsplit_extra <extra>]
 ```
 
 #### 3. Filter FASTQ by BAM
@@ -148,7 +148,7 @@ python methXsort.py bbsplit --read <R1.fastq.gz> [--read2 <R2.fastq.gz>] --host 
 Extract reads from FASTQ that are present in a BAM file (e.g., after bbsplit):
 
 ```bash
-python methXsort.py filter-fastq-by-bam --read <R1.fastq.gz> [--read2 <R2.fastq.gz>] --bam <file.bam> --out <R1_out> [--out2 <R2_out>] [--filterbyname_path <path>]
+methXsort filter-fastq-by-bam --read <R1.fastq.gz> [--read2 <R2.fastq.gz>] --bam <file.bam> --out <R1_out> [--out2 <R2_out>] [--filterbyname_path <path>]
 ```
 
 ---
