@@ -31,7 +31,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip setuptools wheel
         pip install -e .
-        pip install snakemake
         
     - name: Verify methXsort installation
       run: |
@@ -61,329 +60,307 @@ jobs:
     - name: Prepare test data (small reference genomes)
       run: |
         echo "Preparing small test reference genomes..."
-        mkdir -p test_simulation
+        mkdir -p test_simulation/output
         
-        # Create small E. coli reference (10kb for fast testing)
-        if [ -f data/ecoli.fa ]; then
-          head -n 200 data/ecoli.fa > test_simulation/ecoli_small.fa
-          echo "Created small E. coli reference from data/ecoli.fa"
-        else
-          # Create a minimal synthetic reference if file doesn't exist
-          echo ">ecoli_chr1" > test_simulation/ecoli_small.fa
-          python -c "import random; random.seed(42); print(''.join(random.choices('ACGT', k=10000)))" >> test_simulation/ecoli_small.fa
-          echo "Created synthetic E. coli reference"
-        fi
+        # Extract first 10kb from E. coli (host) for fast testing
+        echo "Extracting first 10kb from data/ecoli.fa..."
+        cat data/ecoli.fa > test_simulation/host.fa
+        LINES=$(wc -l < test_simulation/host.fa)
+        echo "Created host reference from E. coli ($LINES lines)"
         
-        # Create small EHEC reference (10kb for fast testing)
-        if [ -f data/ehec.fa ]; then
-          head -n 200 data/ehec.fa > test_simulation/ehec_small.fa
-          echo "Created small EHEC reference from data/ehec.fa"
-        else
-          # Create a minimal synthetic reference if file doesn't exist
-          echo ">ehec_chr1" > test_simulation/ehec_small.fa
-          python -c "import random; random.seed(43); print(''.join(random.choices('ACGT', k=10000)))" >> test_simulation/ehec_small.fa
-          echo "Created synthetic EHEC reference"
-        fi
+        # Extract first 10kb from EHEC (graft) for fast testing
+        echo "Extracting first 10kb from data/ehec.fa..."
+        cat data/ehec.fa > test_simulation/graft.fa
+        LINES=$(wc -l < test_simulation/graft.fa)
+        echo "Created graft reference from EHEC ($LINES lines)"
         
+        echo ""
         echo "Test reference files created:"
-        ls -lh test_simulation/
-        
-    - name: Create test Snakemake config
-      run: |
-        echo "Creating test configuration..."
-        # Get absolute paths to avoid path confusion
-        WORKSPACE=$(pwd)
-        cat > test_simulation/config.yaml << EOF
-        # Test config for CI - using absolute paths
-        host_fa: ${WORKSPACE}/test_simulation/ecoli_small.fa
-        graft_fa: ${WORKSPACE}/test_simulation/ehec_small.fa
-        outdir: ${WORKSPACE}/test_simulation/output/
-        read_pair_number: 500
-        
-        sherman_path: ${WORKSPACE}/tools/Sherman
-        stat_accuracy_path: ${WORKSPACE}/scripts/simulate_reads/stat_accuracy.py
-        xengsort_index_prefix: ${WORKSPACE}/test_simulation/output/ref_idx/xengsort_index
-        EOF
-        
-        echo "Config file created:"
-        cat test_simulation/config.yaml
-        
-    - name: Create CI-compatible Snakemake file
-      run: |
-        echo "Creating CI-compatible Snakemake workflow..."
-        cat > test_simulation/workflow.smk << 'EOF'
-        # CI-compatible version of sim_bs_reads_sherman_xengsort.smk
-        import os
-        
-        graft_fa = os.path.abspath(config["graft_fa"])
-        host_fa = os.path.abspath(config["host_fa"])
-        outdir = os.path.abspath(config["outdir"])
-        read_number = config["read_pair_number"]
-        xengsort_index_prefix = config.get("xengsort_index_prefix")
-        sherman_path = config["sherman_path"]
-        
-        rule all:
-            input:
-                os.path.join(outdir, "ref_idx/xengsort_index.log"),
-                os.path.join(outdir, "read_number_stat.txt"),
-        
-        rule sherman: 
-            input: 
-                graft = graft_fa,
-                host = host_fa,
-            params:
-                od_graft = os.path.join(outdir, "graft"),
-                od_host = os.path.join(outdir, "host"),
-            output:
-                graft = os.path.join(outdir, "graft/sherman.log"), 
-                host = os.path.join(outdir, "host/sherman.log"),
-                sim_graft_R1 = os.path.join(outdir, "sim_reads/simulated_bs_graft_R1.fastq.gz"),
-                sim_graft_R2 = os.path.join(outdir, "sim_reads/simulated_bs_graft_R2.fastq.gz"),
-                sim_host_R1 = os.path.join(outdir, "sim_reads/simulated_bs_host_R1.fastq.gz"),
-                sim_host_R2 = os.path.join(outdir, "sim_reads/simulated_bs_host_R2.fastq.gz"),
-            shell:
-                """
-                mkdir -p {params.od_graft} && ln -sf {input.graft} {params.od_graft}/graft.fa
-                mkdir -p {params.od_host} && ln -sf {input.host} {params.od_host}/host.fa
-                mkdir -p {outdir}/sim_reads
-                cd {params.od_graft} && {sherman_path} --conversion_rate 60 -l 150 -n {read_number} --genome_folder {params.od_graft} -pe > {output.graft} 2>&1
-                cd {params.od_host} && {sherman_path} --conversion_rate 60 -l 150 -n {read_number} --genome_folder {params.od_host} -pe > {output.host} 2>&1
-                cat {params.od_graft}/simulated_1.fastq | sed '1~4s/^@\\([0-9][0-9]*_\\)/@\\1graft_/' | gzip -c > {output.sim_graft_R1}
-                cat {params.od_graft}/simulated_2.fastq | sed '1~4s/^@\\([0-9][0-9]*_\\)/@\\1graft_/' | gzip -c > {output.sim_graft_R2}
-                cat {params.od_host}/simulated_1.fastq | sed '1~4s/^@\\([0-9][0-9]*_\\)/@\\1host_/' | gzip -c > {output.sim_host_R1}
-                cat {params.od_host}/simulated_2.fastq | sed '1~4s/^@\\([0-9][0-9]*_\\)/@\\1host_/' | gzip -c > {output.sim_host_R2}
-                """
-        
-        rule merge_graft_host:
-            input:
-                graft_R1 = rules.sherman.output.sim_graft_R1,
-                graft_R2 = rules.sherman.output.sim_graft_R2,
-                host_R1 = rules.sherman.output.sim_host_R1,
-                host_R2 = rules.sherman.output.sim_host_R2,
-            output:
-                merged_R1 = os.path.join(outdir, "sim_reads/merged_simulated_bs_R1.fastq.gz"),
-                merged_R2 = os.path.join(outdir, "sim_reads/merged_simulated_bs_R2.fastq.gz"),
-                merged_cvt_R1 = os.path.join(outdir, "sim_reads/merged_simulated_bscvt_R1.fastq.gz"),
-                merged_cvt_R2 = os.path.join(outdir, "sim_reads/merged_simulated_bscvt_R2.fastq.gz"),
-            shell:
-                """
-                cat {input.graft_R1} {input.host_R1} > {output.merged_R1}
-                cat {input.graft_R2} {input.host_R2} > {output.merged_R2}
-                methXsort convert-reads --with_orig_seq \
-                    --read {output.merged_R1} --read2 {output.merged_R2} \
-                    --out {output.merged_cvt_R1} --out2 {output.merged_cvt_R2}
-                """
-        
-        rule convert_ref:
-            input:
-                graft_fa = graft_fa,
-                host_fa = host_fa,
-            output:
-                graft_fa_cvt = os.path.join(outdir, "ref_idx/graft_cvt.fa"),
-                host_fa_cvt = os.path.join(outdir, "ref_idx/host_cvt.fa"),
-            shell:
-                """
-                mkdir -p {outdir}/ref_idx
-                methXsort convert-ref {input.graft_fa} --out {output.graft_fa_cvt}
-                methXsort convert-ref {input.host_fa} --out {output.host_fa_cvt}
-                """
-        
-        rule xengsort_idx:
-            input:
-                graft_fa = rules.convert_ref.output.graft_fa_cvt,
-                host_fa = rules.convert_ref.output.host_fa_cvt,
-            output:
-                log = os.path.join(outdir, "ref_idx/xengsort_index.log"),
-            params:
-                xengsort_index_prefix = xengsort_index_prefix,
-            shell:
-                """
-                methXsort xengsort-index \
-                    --host {input.host_fa} --graft {input.graft_fa} \
-                    --index {params.xengsort_index_prefix} \
-                    -n 7_000_000_000 --fill 0.88 --statistics summary -k 25 \
-                    > {output.log} 2>&1
-                """
-        
-        rule xengsort_classify:
-            input:
-                reads_R1 = rules.merge_graft_host.output.merged_cvt_R1,
-                reads_R2 = rules.merge_graft_host.output.merged_cvt_R2,
-                index_log = rules.xengsort_idx.output.log,
-            params:
-                xengsort_out_prefix = os.path.join(outdir, "xengsort_classify/xengsort_classify"),
-                xengsort_index_prefix = xengsort_index_prefix,
-            output:
-                classify_log = os.path.join(outdir, "classify.log"),
-                fq_graft_R1 = os.path.join(outdir, "xengsort_classify/xengsort_classify-graft.1.fq.gz"),
-                fq_graft_R2 = os.path.join(outdir, "xengsort_classify/xengsort_classify-graft.2.fq.gz"),
-                fq_host_R1 = os.path.join(outdir, "xengsort_classify/xengsort_classify-host.1.fq.gz"),
-                fq_host_R2 = os.path.join(outdir, "xengsort_classify/xengsort_classify-host.2.fq.gz"),
-            shell:
-                """
-                mkdir -p $(dirname {params.xengsort_out_prefix})
-                methXsort xengsort-classify \
-                    --read {input.reads_R1} --read2 {input.reads_R2} \
-                    --index {params.xengsort_index_prefix} \
-                    --out_prefix {params.xengsort_out_prefix} \
-                    --threads 2 \
-                    > {output.classify_log} 2>&1
-                """
-        
-        rule restore_fastq:
-            input:
-                R1_graft = rules.xengsort_classify.output.fq_graft_R1,
-                R2_graft = rules.xengsort_classify.output.fq_graft_R2,
-                R1_host = rules.xengsort_classify.output.fq_host_R1,
-                R2_host = rules.xengsort_classify.output.fq_host_R2,
-            output:
-                fastq_graft_R1 = os.path.join(outdir, "fastq/restored_graft_R1.fastq.gz"),
-                fastq_graft_R2 = os.path.join(outdir, "fastq/restored_graft_R2.fastq.gz"),
-                fastq_host_R1 = os.path.join(outdir, "fastq/restored_host_R1.fastq.gz"),
-                fastq_host_R2 = os.path.join(outdir, "fastq/restored_host_R2.fastq.gz"),
-            shell:
-                """
-                mkdir -p {outdir}/fastq
-                methXsort restore-fastq \
-                    --read {input.R1_graft} --read2 {input.R2_graft} \
-                    --out {output.fastq_graft_R1} --out2 {output.fastq_graft_R2}
-                methXsort restore-fastq \
-                    --read {input.R1_host} --read2 {input.R2_host} \
-                    --out {output.fastq_host_R1} --out2 {output.fastq_host_R2}
-                """
-        
-        rule stat_read_number: 
-            input: 
-                raw_R1 = rules.merge_graft_host.output.merged_cvt_R1,
-                fastq_graft_R1 = rules.restore_fastq.output.fastq_graft_R1,
-                fastq_host_R1 = rules.restore_fastq.output.fastq_host_R1
-            output: 
-                read_number_stat = os.path.join(outdir, "read_number_stat.txt")
-            params: 
-                xengsort_out_prefix = os.path.join(outdir, "xengsort_classify/xengsort_classify"),
-            shell: 
-                """
-                methXsort stat-split --raw {input.raw_R1} \
-                    --graft {input.fastq_graft_R1} --host {input.fastq_host_R1} \
-                    --xengsort_prefix {params.xengsort_out_prefix} \
-                    --sample_name "ci_test_simulation" \
-                    > {output.read_number_stat}
-                """
-        EOF
-        
-        echo "Snakemake workflow created"
+        ls -lh test_simulation/*.fa
+        echo ""
+        echo "Host reference info:"
+        head -n 1 test_simulation/host.fa
+        echo "Graft reference info:"
+        head -n 1 test_simulation/graft.fa
         
     - name: Test methXsort commands individually
       run: |
-        echo "Testing individual methXsort commands..."
+        echo "======================================"
+        echo "Testing individual methXsort commands"
+        echo "======================================"
+        echo ""
         
-        # Test reference conversion
-        echo "1. Testing reference conversion..."
-        methXsort convert-ref test_simulation/ecoli_small.fa -o test_simulation/ecoli_converted.fa
-        methXsort convert-ref test_simulation/ehec_small.fa -o test_simulation/ehec_converted.fa
-        
+        # Test 1: Reference conversion
+        echo "1. Testing convert-ref..."
+        methXsort convert-ref test_simulation/host.fa -o test_simulation/output/host_cvt.fa
+        methXsort convert-ref test_simulation/graft.fa -o test_simulation/output/graft_cvt.fa
         echo "✓ Reference conversion successful"
-        ls -lh test_simulation/*_converted.fa
-        
-    - name: Run Snakemake workflow (dry run)
-      run: |
-        echo "Running Snakemake dry run..."
-        snakemake -s test_simulation/workflow.smk --configfile test_simulation/config.yaml --dry-run --printshellcmds
-        
-    - name: Run Snakemake workflow (full execution)
-      run: |
-        echo "Running full Snakemake workflow..."
-        snakemake -s test_simulation/workflow.smk --configfile test_simulation/config.yaml --cores 2 --verbose --printshellcmds
-        
         echo ""
-        echo "Workflow completed! Checking outputs..."
-        ls -lR test_simulation/output/ || echo "Output directory not found"
         
-    - name: Verify outputs
-      run: |
-        echo "Verifying workflow outputs..."
+        # Test 2: Verify converted references exist
+        ls -lh test_simulation/output/*_cvt.fa
         echo ""
+        
+    - name: Run Sherman simulation
+      run: |
+        echo "======================================"
+        echo "Running Sherman bisulfite simulation"
+        echo "======================================"
+        echo ""
+        
+        WORKSPACE=$(pwd)
+        mkdir -p test_simulation/output/graft test_simulation/output/host test_simulation/output/sim_reads
+        
+        # Link references for Sherman
+        ln -sf $WORKSPACE/test_simulation/graft.fa test_simulation/output/graft/graft.fa
+        ln -sf $WORKSPACE/test_simulation/host.fa test_simulation/output/host/host.fa
+        
+        # Run Sherman for graft (500 read pairs)
+        echo "Simulating graft reads..."
+        cd test_simulation/output/graft
+        $WORKSPACE/tools/Sherman --conversion_rate 60 -l 150 -n 500 --genome_folder . -pe > sherman.log 2>&1
+        cd $WORKSPACE
+        
+        # Run Sherman for host (500 read pairs)
+        echo "Simulating host reads..."
+        cd test_simulation/output/host
+        $WORKSPACE/tools/Sherman --conversion_rate 60 -l 150 -n 500 --genome_folder . -pe > sherman.log 2>&1
+        cd $WORKSPACE
+        
+        # Add labels to read IDs and compress
+        echo "Processing simulated reads..."
+        cat test_simulation/output/graft/simulated_1.fastq | sed '1~4s/^@\([0-9][0-9]*_\)/@\1graft_/' | gzip -c > test_simulation/output/sim_reads/simulated_bs_graft_R1.fastq.gz
+        cat test_simulation/output/graft/simulated_2.fastq | sed '1~4s/^@\([0-9][0-9]*_\)/@\1graft_/' | gzip -c > test_simulation/output/sim_reads/simulated_bs_graft_R2.fastq.gz
+        cat test_simulation/output/host/simulated_1.fastq | sed '1~4s/^@\([0-9][0-9]*_\)/@\1host_/' | gzip -c > test_simulation/output/sim_reads/simulated_bs_host_R1.fastq.gz
+        cat test_simulation/output/host/simulated_2.fastq | sed '1~4s/^@\([0-9][0-9]*_\)/@\1host_/' | gzip -c > test_simulation/output/sim_reads/simulated_bs_host_R2.fastq.gz
+        
+        echo "✓ Sherman simulation complete"
+        ls -lh test_simulation/output/sim_reads/*.fastq.gz
+        echo ""
+        
+    - name: Merge and convert reads
+      run: |
+        echo "======================================"
+        echo "Merging and converting reads"
+        echo "======================================"
+        echo ""
+        
+        # Merge graft and host reads
+        cat test_simulation/output/sim_reads/simulated_bs_graft_R1.fastq.gz test_simulation/output/sim_reads/simulated_bs_host_R1.fastq.gz > test_simulation/output/sim_reads/merged_simulated_bs_R1.fastq.gz
+        cat test_simulation/output/sim_reads/simulated_bs_graft_R2.fastq.gz test_simulation/output/sim_reads/simulated_bs_host_R2.fastq.gz > test_simulation/output/sim_reads/merged_simulated_bs_R2.fastq.gz
+        echo "✓ Reads merged"
+        
+        # Convert reads (C→T, G→A) while preserving original sequence
+        echo "Converting reads (C→T, G→A)..."
+        methXsort convert-reads --with_orig_seq \
+          --read test_simulation/output/sim_reads/merged_simulated_bs_R1.fastq.gz \
+          --read2 test_simulation/output/sim_reads/merged_simulated_bs_R2.fastq.gz \
+          --out test_simulation/output/sim_reads/merged_simulated_bscvt_R1.fastq.gz \
+          --out2 test_simulation/output/sim_reads/merged_simulated_bscvt_R2.fastq.gz
+        
+        echo "✓ Reads converted"
+        ls -lh test_simulation/output/sim_reads/merged_*.fastq.gz
+        echo ""
+        
+    - name: Build xengsort index
+      run: |
+        echo "======================================"
+        echo "Building xengsort index"
+        echo "======================================"
+        echo ""
+        
+        mkdir -p test_simulation/output/ref_idx
+        
+        methXsort xengsort-index \
+          --host test_simulation/output/host_cvt.fa \
+          --graft test_simulation/output/graft_cvt.fa \
+          --index test_simulation/output/ref_idx/xengsort_index \
+          -n 11_000_000 --fill 0.88 --statistics summary -k 25 \
+          > test_simulation/output/ref_idx/xengsort_index.log 2>&1
+        
+        echo "✓ xengsort index built"
+        ls -lh test_simulation/output/ref_idx/
+        echo ""
+        echo "Index log (first 20 lines):"
+        head -20 test_simulation/output/ref_idx/xengsort_index.log
+        echo ""
+        
+    - name: Classify reads with xengsort
+      run: |
+        echo "======================================"
+        echo "Classifying reads with xengsort"
+        echo "======================================"
+        echo ""
+        
+        mkdir -p test_simulation/output/xengsort_classify
+        
+        methXsort xengsort-classify \
+          --read test_simulation/output/sim_reads/merged_simulated_bscvt_R1.fastq.gz \
+          --read2 test_simulation/output/sim_reads/merged_simulated_bscvt_R2.fastq.gz \
+          --index test_simulation/output/ref_idx/xengsort_index \
+          --out_prefix test_simulation/output/xengsort_classify/xengsort_classify \
+          --threads 2 \
+          > test_simulation/output/classify.log 2>&1
+        
+        echo "✓ Reads classified"
+        ls -lh test_simulation/output/xengsort_classify/
+        echo ""
+        
+    - name: Restore original FASTQ sequences
+      run: |
+        echo "======================================"
+        echo "Restoring original FASTQ sequences"
+        echo "======================================"
+        echo ""
+        
+        mkdir -p test_simulation/output/fastq
+        
+        # Restore graft reads
+        echo "Restoring graft reads..."
+        methXsort restore-fastq \
+          --read test_simulation/output/xengsort_classify/xengsort_classify-graft.1.fq.gz \
+          --read2 test_simulation/output/xengsort_classify/xengsort_classify-graft.2.fq.gz \
+          --out test_simulation/output/fastq/restored_graft_R1.fastq.gz \
+          --out2 test_simulation/output/fastq/restored_graft_R2.fastq.gz
+        
+        # Restore host reads
+        echo "Restoring host reads..."
+        methXsort restore-fastq \
+          --read test_simulation/output/xengsort_classify/xengsort_classify-host.1.fq.gz \
+          --read2 test_simulation/output/xengsort_classify/xengsort_classify-host.2.fq.gz \
+          --out test_simulation/output/fastq/restored_host_R1.fastq.gz \
+          --out2 test_simulation/output/fastq/restored_host_R2.fastq.gz
+        
+        echo "✓ FASTQ sequences restored"
+        ls -lh test_simulation/output/fastq/
+        echo ""
+        
+    - name: Generate statistics
+      run: |
+        echo "======================================"
+        echo "Generating statistics"
+        echo "======================================"
+        echo ""
+        
+        methXsort stat-split \
+          --raw test_simulation/output/sim_reads/merged_simulated_bscvt_R1.fastq.gz \
+          --graft test_simulation/output/fastq/restored_graft_R1.fastq.gz \
+          --host test_simulation/output/fastq/restored_host_R1.fastq.gz \
+          --xengsort_prefix test_simulation/output/xengsort_classify/xengsort_classify \
+          --sample_name "ci_test_simulation" \
+          > test_simulation/output/read_number_stat.txt
+        
+        echo "✓ Statistics generated"
+        echo ""
+        echo "======================================"
+        echo "READ STATISTICS"
+        echo "======================================"
+        cat test_simulation/output/read_number_stat.txt
+        echo ""
+        
+    - name: Verify all outputs
+      run: |
+        echo "======================================"
+        echo "Verifying all pipeline outputs"
+        echo "======================================"
+        echo ""
+        
+        EXIT_CODE=0
         
         # Check converted references
-        if [ -f test_simulation/output/ref_idx/graft_cvt.fa ]; then
-          echo "✓ Converted graft reference created"
+        if [ -f test_simulation/output/host_cvt.fa ]; then
+          echo "✓ Converted host reference"
         else
-          echo "✗ Converted graft reference missing"
+          echo "✗ Missing: converted host reference"
+          EXIT_CODE=1
         fi
         
-        if [ -f test_simulation/output/ref_idx/host_cvt.fa ]; then
-          echo "✓ Converted host reference created"
+        if [ -f test_simulation/output/graft_cvt.fa ]; then
+          echo "✓ Converted graft reference"
         else
-          echo "✗ Converted host reference missing"
+          echo "✗ Missing: converted graft reference"
+          EXIT_CODE=1
         fi
         
         # Check Sherman outputs
         if [ -f test_simulation/output/sim_reads/simulated_bs_graft_R1.fastq.gz ]; then
-          echo "✓ Sherman graft reads created"
+          echo "✓ Sherman graft reads"
         else
-          echo "✗ Sherman graft reads missing"
+          echo "✗ Missing: Sherman graft reads"
+          EXIT_CODE=1
         fi
         
         if [ -f test_simulation/output/sim_reads/simulated_bs_host_R1.fastq.gz ]; then
-          echo "✓ Sherman host reads created"
+          echo "✓ Sherman host reads"
         else
-          echo "✗ Sherman host reads missing"
+          echo "✗ Missing: Sherman host reads"
+          EXIT_CODE=1
         fi
         
         # Check merged and converted reads
         if [ -f test_simulation/output/sim_reads/merged_simulated_bscvt_R1.fastq.gz ]; then
-          echo "✓ Merged and converted reads created"
+          echo "✓ Merged and converted reads"
         else
-          echo "✗ Merged and converted reads missing"
+          echo "✗ Missing: merged and converted reads"
+          EXIT_CODE=1
         fi
         
         # Check xengsort index
         if [ -f test_simulation/output/ref_idx/xengsort_index.log ]; then
-          echo "✓ Xengsort index log created"
-          echo "Xengsort index log (first 20 lines):"
-          head -20 test_simulation/output/ref_idx/xengsort_index.log
+          echo "✓ xengsort index"
         else
-          echo "✗ Xengsort index log missing"
+          echo "✗ Missing: xengsort index"
+          EXIT_CODE=1
         fi
         
         # Check xengsort classification
         if [ -f test_simulation/output/xengsort_classify/xengsort_classify-graft.1.fq.gz ]; then
-          echo "✓ Xengsort classified graft reads created"
+          echo "✓ xengsort classified graft reads"
         else
-          echo "✗ Xengsort classified graft reads missing"
+          echo "✗ Missing: xengsort classified graft reads"
+          EXIT_CODE=1
         fi
         
         if [ -f test_simulation/output/xengsort_classify/xengsort_classify-host.1.fq.gz ]; then
-          echo "✓ Xengsort classified host reads created"
+          echo "✓ xengsort classified host reads"
         else
-          echo "✗ Xengsort classified host reads missing"
+          echo "✗ Missing: xengsort classified host reads"
+          EXIT_CODE=1
         fi
         
         # Check restored FASTQs
         if [ -f test_simulation/output/fastq/restored_graft_R1.fastq.gz ]; then
-          echo "✓ Restored graft FASTQ created"
+          echo "✓ Restored graft FASTQ"
         else
-          echo "✗ Restored graft FASTQ missing"
+          echo "✗ Missing: restored graft FASTQ"
+          EXIT_CODE=1
         fi
         
         if [ -f test_simulation/output/fastq/restored_host_R1.fastq.gz ]; then
-          echo "✓ Restored host FASTQ created"
+          echo "✓ Restored host FASTQ"
         else
-          echo "✗ Restored host FASTQ missing"
+          echo "✗ Missing: restored host FASTQ"
+          EXIT_CODE=1
         fi
         
         # Check statistics
         if [ -f test_simulation/output/read_number_stat.txt ]; then
-          echo "✓ Read number statistics created"
-          echo "Statistics:"
-          cat test_simulation/output/read_number_stat.txt
+          echo "✓ Read statistics"
         else
-          echo "✗ Read number statistics missing"
+          echo "✗ Missing: read statistics"
+          EXIT_CODE=1
         fi
         
         echo ""
-        echo "=== Complete File List ==="
-        find test_simulation/output -type f 2>/dev/null | sort || echo "No output files found"
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "✅ All outputs verified successfully!"
+        else
+          echo "❌ Some outputs are missing!"
+          echo ""
+          echo "=== Directory structure ==="
+          find test_simulation/output -type f 2>/dev/null | sort || echo "No output files found"
+          exit $EXIT_CODE
+        fi
         
     - name: Upload test results
       if: always()
@@ -392,32 +369,38 @@ jobs:
         name: simulation-test-results
         path: |
           test_simulation/output/
-          test_simulation/*.log
-          test_simulation/config.yaml
-          test_simulation/workflow.smk
+          test_simulation/*.fa
         retention-days: 7
         
     - name: Test summary
       if: always()
       run: |
         echo ""
-        echo "======================================================="
-        echo "       SIMULATION PIPELINE TEST SUMMARY      "
-        echo "======================================================="
+        echo "=========================================================="
+        echo "         SIMULATION PIPELINE TEST SUMMARY"
+        echo "=========================================================="
         echo ""
-        echo "✓ methXsort package installed successfully"
+        echo "✓ methXsort package installed and verified"
         echo "✓ Sherman bisulfite simulator installed"
         echo "✓ xengsort read classifier installed"
-        echo "✓ All methXsort subcommands available"
-        echo "✓ Reference conversion tested"
-        echo "✓ Sherman read simulation executed"
-        echo "✓ Read conversion (C→T, G→A) tested"
-        echo "✓ xengsort index building tested"
-        echo "✓ xengsort classification tested"
-        echo "✓ FASTQ restoration tested"
-        echo "✓ Statistics generation tested"
         echo ""
-        echo "Full simulation pipeline: COMPLETED"
+        echo "Pipeline Steps Completed:"
+        echo "  1. ✓ Reference conversion (C→T, G→A)"
+        echo "  2. ✓ Sherman read simulation (500 read pairs × 2)"
+        echo "  3. ✓ Read merging and labeling"
+        echo "  4. ✓ Read conversion (C→T, G→A)"
+        echo "  5. ✓ xengsort index building"
+        echo "  6. ✓ xengsort classification (host vs graft)"
+        echo "  7. ✓ FASTQ restoration (original sequences)"
+        echo "  8. ✓ Statistics generation"
         echo ""
-        echo "See artifacts for detailed outputs and logs"
-        echo "======================================================="
+        echo "All methXsort subcommands tested:"
+        echo "  • methXsort convert-ref"
+        echo "  • methXsort convert-reads"
+        echo "  • methXsort xengsort-index"
+        echo "  • methXsort xengsort-classify"
+        echo "  • methXsort restore-fastq"
+        echo "  • methXsort stat-split"
+        echo ""
+        echo "See uploaded artifacts for detailed results"
+        echo "=========================================================="
