@@ -175,7 +175,7 @@ jobs:
           --host test_simulation/output/host_cvt.fa \
           --graft test_simulation/output/graft_cvt.fa \
           --index test_simulation/output/ref_idx/xengsort_index \
-          -n 11_000_000 --fill 0.88 --statistics summary -k 25 \
+          -n 20_000_000 --fill 0.88 --statistics summary -k 25 \
           > test_simulation/output/ref_idx/xengsort_index.log 2>&1
         
         echo "✓ xengsort index built"
