@@ -43,13 +43,14 @@ jobs:
     - name: Install Sherman (bisulfite read simulator)
       run: |
         echo "Installing Sherman v0.1.8..."
-        mkdir -p tools
-        cd tools
-        wget https://www.bioinformatics.babraham.ac.uk/projects/sherman/sherman_v0.1.8.tar.gz
-        tar -xzf sherman_v0.1.8.tar.gz
-        chmod +x Sherman
-        echo "Sherman installed at: $(pwd)/Sherman"
-        ./Sherman --version || echo "Sherman installed (no version flag)"
+          mkdir -p tools
+          cd tools
+          wget https://www.bioinformatics.babraham.ac.uk/projects/sherman/Sherman_v0.1.8.zip
+          unzip Sherman_v0.1.8.zip
+          chmod +x Sherman
+          echo "Sherman installed at: $(pwd)/Sherman"
+          ./Sherman --version || echo "Sherman installed (no version flag)"
+          cd ..
         
     - name: Install xengsort
       run: |
