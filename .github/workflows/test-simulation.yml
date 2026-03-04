@@ -25,7 +25,13 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget curl gzip
+        # install bgzip (tabix/htslib) and samtools; keep wget/curl/gzip
+        sudo apt-get install -y wget curl gzip tabix samtools htslib
+        # sanity check
+        if ! command -v bgzip >/dev/null 2>&1; then
+          echo "ERROR: bgzip not found after install"
+          exit 1
+        fi
         
     - name: Install Python dependencies
       run: |
