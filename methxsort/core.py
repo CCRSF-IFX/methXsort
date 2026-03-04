@@ -11,6 +11,7 @@ import subprocess
 import shlex
 import pathlib
 import re
+import shutil, sys
 
 __version__ = "0.1.0"
 
@@ -550,6 +551,15 @@ def filter_xengsort_extra(xengsort_extra, used_params):
                 sys.exit(1)
     return xengsort_extra
 
+def ensure_bgzip():
+    if shutil.which("bgzip") is None:
+        sys.stderr.write(
+            "Error: bgzip (htslib/tabix) is required by xengsort but was not found in PATH.\n"
+            "Install on Debian/Ubuntu: sudo apt-get install tabix samtools\n"
+            "Or with conda: conda install -c bioconda htslib samtools\n"
+        )
+        sys.exit(1)
+
 def run_xengsort_classify(args):
     """
     Run xengsort classify with argument checking for redundant parameters in xengsort_extra.
@@ -568,6 +578,7 @@ def run_xengsort_classify(args):
         f"--threads {args.threads} "
         f"{filtered_extra}"
     )
+    ensure_bgzip()
     print(f"[xengsort-classify] CMD: {cmd}", file=sys.stdout)
     subprocess.check_call(cmd, shell=True)
 
