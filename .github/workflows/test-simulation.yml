@@ -175,8 +175,7 @@ jobs:
           --host test_simulation/output/host_cvt.fa \
           --graft test_simulation/output/graft_cvt.fa \
           --index test_simulation/output/ref_idx/xengsort_index \
-          -n 20_000_000 --fill 0.88 --statistics summary -k 25 \
-          > test_simulation/output/ref_idx/xengsort_index.log 2>&1
+          -n 20_000_000 --fill 0.88 --statistics summary -k 25
         
         echo "✓ xengsort index built"
         ls -lh test_simulation/output/ref_idx/
@@ -198,9 +197,7 @@ jobs:
           --read test_simulation/output/sim_reads/merged_simulated_bscvt_R1.fastq.gz \
           --read2 test_simulation/output/sim_reads/merged_simulated_bscvt_R2.fastq.gz \
           --index test_simulation/output/ref_idx/xengsort_index \
-          --out_prefix test_simulation/output/xengsort_classify/xengsort_classify \
-          --threads 2 \
-          > test_simulation/output/classify.log 2>&1
+          --out_prefix test_simulation/output/xengsort_classify/xengsort_classify
         
         echo "✓ Reads classified"
         ls -lh test_simulation/output/xengsort_classify/
