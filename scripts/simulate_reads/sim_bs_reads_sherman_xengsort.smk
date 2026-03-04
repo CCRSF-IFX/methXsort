@@ -6,10 +6,9 @@ host_name = os.path.basename(host_fa).split(".")[0]
 outdir = os.path.abspath(config["outdir"])
 read_number = config["read_pair_number"]
 xengsort_index_prefix = config.get("xengsort_index_prefix", None)
-#bbsplit_path = config["bbsplit_idx_path"]
-#bbsplit_idx = config["bbsplit_idx"]
 
-methxsort_path = config["methxsort_path"]
+# Note: methXsort should be installed via pip (pip install methXsort)
+# If not installed, you can still use: python /path/to/methXsort.py
 sherman_path = config["sherman_path"]
 stat_accuracy_path = config.get("stat_accuracy_path", None)
 
@@ -64,7 +63,7 @@ rule merge_graft_host:
         """
 cat {input.graft_R1} {input.host_R1} > {output.merged_R1}
 cat {input.graft_R2} {input.host_R2} > {output.merged_R2}
-python {methxsort_path} convert-reads --with_orig_seq \
+methXsort convert-reads --with_orig_seq \
     --read {output.merged_R1} --read2 {output.merged_R2} \
     --out {output.merged_cvt_R1} --out2 {output.merged_cvt_R2}
 """
@@ -78,9 +77,9 @@ rule convert_ref:
         host_fa_cvt = os.path.join(outdir, "ref_idx/host_cvt.fa"),
     shell:
         """
-python {methxsort_path} convert-ref \
+methXsort convert-ref \
     {input.graft_fa} --out {output.graft_fa_cvt} 
-python {methxsort_path} convert-ref \
+methXsort convert-ref \
     {input.host_fa} --out {output.host_fa_cvt}
 """
 
@@ -96,7 +95,7 @@ rule xengsort_idx:
 
     shell:
         """
-python {methxsort_path} xengsort-index \
+methXsort xengsort-index \
     --host {input.host_fa} --graft {input.graft_fa} \
     --index {params.xengsort_index_prefix} \
     -n 7_000_000_000 --fill 0.88 --statistics summary -k 25 \
@@ -122,7 +121,7 @@ rule xengsort_classify:
     shell:
         """
 mkdir -p {outdir}/xengsort_classify && cd {outdir}/xengsort_classify && \
-python {methxsort_path} xengsort-classify \
+methXsort xengsort-classify \
     --read {input.reads_R1} --read2 {input.reads_R2} \
     --index {xengsort_index_prefix} \
     --out_prefix {params.xengsort_out_prefix} \
@@ -143,10 +142,10 @@ rule convert_restore_fastq:
         fastq_host_R2 = os.path.join(outdir, "fastq/bbsplit_host_R2.fastq.gz"),
     shell:
         """
-python {methxsort_path} restore-fastq \
+methXsort restore-fastq \
     --read {input.R1_graft} --read2 {input.R2_graft} \
     --out {output.fastq_graft_R1} --out2 {output.fastq_graft_R2} 
-python {methxsort_path} restore-fastq \
+methXsort restore-fastq \
     --read {input.R1_host} --read2 {input.R2_host} \
     --out {output.fastq_host_R1} --out2 {output.fastq_host_R2}
 """
@@ -163,7 +162,7 @@ rule stat_read_number:
         xengsort_out_prefix = os.path.join(outdir, "xengsort_classify/xengsort_classify"),
     shell: 
         """
-python {methxsort_path} stat-split --raw {input.raw_R1} \
+methXsort stat-split --raw {input.raw_R1} \
              --graft {input.fastq_graft_R1} --host {input.fastq_host_R1} \
              --xengsort_prefix {params.xengsort_out_prefix} \
              --sample_name "simulation_100k" \

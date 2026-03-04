@@ -8,7 +8,8 @@ read_number = config["read_pair_number"]
 bbsplit_path = config["bbsplit_idx_path"]
 bbsplit_idx = config["bbsplit_idx"]
 
-methxsort_path = config["methxsort_path"]
+# Note: methXsort should be installed via pip (pip install methXsort)
+# If not installed, you can still use: python /path/to/methXsort.py
 sherman_path = config["sherman_path"]
 stat_accuracy_path = config.get("stat_accuracy_path", None)
 
@@ -65,7 +66,7 @@ rule merge_graft_host:
         """
 cat {input.graft_R1} {input.host_R1} > {output.merged_R1}
 cat {input.graft_R2} {input.host_R2} > {output.merged_R2}
-python {methxsort_path} convert-reads \
+methXsort convert-reads \
     --read {output.merged_R1} --read2 {output.merged_R2} \
     --out {output.merged_cvt_R1} --out2 {output.merged_cvt_R2}
 """
@@ -79,9 +80,9 @@ rule convert_ref:
         host_fa_cvt = os.path.join(outdir, "ref_idx/host_cvt.fa"),
     shell:
         """
-python {methxsort_path} convert-ref \
+methXsort convert-ref \
     {input.graft_fa} --out {output.graft_fa_cvt} 
-python {methxsort_path} convert-ref \
+methXsort convert-ref \
     {input.host_fa} --out {output.host_fa_cvt}
 """
 
@@ -97,7 +98,7 @@ rule bbsplit_idx:
 
     shell:
         """
-python {methxsort_path} bbsplit-index \
+methXsort bbsplit-index \
     --host {input.host_fa} --graft {input.graft_fa} \
     --host_name {host_name} --graft_name {graft_name} \
     --bbsplit_index_path {params.bbsplit_index_path} \
@@ -122,7 +123,7 @@ rule bbsplit:
     shell:
         """
 mkdir -p {outdir}/bbsplit && cd {outdir}/bbsplit && \
-python {methxsort_path} bbsplit \
+methXsort bbsplit \
     --read {input.reads_R1} --read2 {input.reads_R2} \
     --host {host_name} --graft {graft_name} \
     --bbsplit_index_build 1 \
@@ -145,11 +146,11 @@ rule convert_bam_to_fastq:
         fastq_host_R2 = os.path.join(outdir, "fastq/bbsplit_host_R2.fastq.gz"),
     shell:
         """
-python {methxsort_path} filter-fastq-by-bam \
+methXsort filter-fastq-by-bam \
     --read {input.R1} --read2 {input.R2} \
     --bam {input.bam_graft} \
     --out {output.fastq_graft_R1} --out2 {output.fastq_graft_R2} 
-python {methxsort_path} filter-fastq-by-bam \
+methXsort filter-fastq-by-bam \
     --read {input.R1} --read2 {input.R2} \
     --bam {input.bam_host} \
     --out {output.fastq_host_R1} --out2 {output.fastq_host_R2}
@@ -165,7 +166,7 @@ rule stat_read_number:
     params: batch = "-l nodes=1:ppn=16,mem=64g"
     shell: 
         """
-python {methxsort_path} stat-split --raw {input.raw_R1} \
+methXsort stat-split --raw {input.raw_R1} \
              --graft {input.fastq_graft_R1} --host {input.fastq_host_R1} \
               > {output.read_number_stat}
 """
