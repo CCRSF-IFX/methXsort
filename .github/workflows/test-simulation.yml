@@ -25,8 +25,8 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        # install bgzip (tabix/htslib) and samtools; keep wget/curl/gzip
-        sudo apt-get install -y wget curl gzip tabix samtools htslib
+        # tabix provides bgzip on Ubuntu runners; also install unzip for Sherman archive extraction
+        sudo apt-get install -y --no-install-recommends wget curl gzip tabix samtools unzip ca-certificates
         # sanity check
         if ! command -v bgzip >/dev/null 2>&1; then
           echo "ERROR: bgzip not found after install"
